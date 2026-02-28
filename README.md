@@ -1,7 +1,5 @@
 # 🚀 DevSync
 
-![DevSync Logo](./client/public/logo.png)
-
 DevSync is a high-performance real-time collaborative coding platform that enables multiple developers to work together inside secure shared rooms. It provides synchronized multi-file editing, live communication, AI-powered assistance, and integrated code execution — all within a seamless web-based environment.
 
 ---
