@@ -10,12 +10,43 @@ import path from "path"
 dotenv.config()
 
 const app = express()
+const PISTON_API_URL = process.env.PISTON_API_URL || "http://localhost:2000/api/v2"
 
 app.use(express.json())
 
 app.use(cors())
 
 app.use(express.static(path.join(__dirname, "public"))) // Serve static files
+
+app.get("/api/piston/runtimes", async (_req: Request, res: Response) => {
+	try {
+		const response = await fetch(`${PISTON_API_URL}/runtimes`)
+		const data = await response.json()
+		res.status(response.status).json(data)
+	} catch (error) {
+		res.status(502).json({
+			error: "Unable to reach Piston runtime service",
+		})
+	}
+})
+
+app.post("/api/piston/execute", async (req: Request, res: Response) => {
+	try {
+		const response = await fetch(`${PISTON_API_URL}/execute`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(req.body),
+		})
+		const data = await response.json()
+		res.status(response.status).json(data)
+	} catch (error) {
+		res.status(502).json({
+			error: "Unable to reach Piston runtime service",
+		})
+	}
+})
 
 const server = http.createServer(app)
 const io = new Server(server, {

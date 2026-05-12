@@ -17,9 +17,16 @@ function RunView() {
         runCode,
     } = useRunCode()
 
+    const getLanguageValue = (language: {
+        language: string
+        version: string
+    }) => `${language.language}@${language.version}`
+
     const handleLanguageChange = (e: ChangeEvent<HTMLSelectElement>) => {
-        const lang = JSON.parse(e.target.value)
-        setSelectedLanguage(lang)
+        const lang = supportedLanguages.find(
+            (language) => getLanguageValue(language) === e.target.value,
+        )
+        if (lang) setSelectedLanguage(lang)
     }
 
     const copyOutput = () => {
@@ -37,16 +44,22 @@ function RunView() {
                 <div className="relative w-full">
                     <select
                         className="w-full rounded-md border-none bg-darkHover px-4 py-2 text-white outline-none"
-                        value={JSON.stringify(selectedLanguage)}
+                        value={getLanguageValue(selectedLanguage)}
                         onChange={handleLanguageChange}
+                        disabled={supportedLanguages.length === 0}
                     >
-                        {supportedLanguages
+                        {supportedLanguages.length === 0 && (
+                            <option value={getLanguageValue(selectedLanguage)}>
+                                Loading languages...
+                            </option>
+                        )}
+                        {[...supportedLanguages]
                             .sort((a, b) => (a.language > b.language ? 1 : -1))
                             .map((lang, i) => {
                                 return (
                                     <option
                                         key={i}
-                                        value={JSON.stringify(lang)}
+                                        value={getLanguageValue(lang)}
                                     >
                                         {lang.language +
                                             (lang.version

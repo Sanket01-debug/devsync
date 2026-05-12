@@ -30,26 +30,23 @@ const CopilotContextProvider = ({ children }: { children: ReactNode }) => {
 
             toast.loading("Generating code...")
             setIsRunning(true)
-            const response = await axiosInstance.post("/", {
-                messages: [
-                    {
-                        role: "system",
-                        content:
-                            "You are a code generator copilot for project named Code Sync. Generate code based on the given prompt without any explanation. Return only the code, formatted in Markdown using the appropriate language syntax (e.g., js for JavaScript, py for Python). Do not include any additional text or explanations. If you don't know the answer, respond with 'I don't know'.",
-                    },
-                    {
-                        role: "user",
-                        content: input,
-                    },
-                ],
-                model: "mistral",
-                private: true,
-            })
-            if (response.data) {
-                toast.success("Code generated successfully")
-                const code = response.data
-                if (code) setOutput(code)
-            }
+const response = await axiosInstance.post("/v1/chat/completions", {
+    model: "openai",
+    messages: [
+        {
+            role: "user",
+            content: input,
+        },
+    ],
+})
+if (response.data) {
+    toast.success("Code generated successfully")
+
+    const code =
+        response.data.choices[0].message.content
+
+    if (code) setOutput(code)
+}
             setIsRunning(false)
             toast.dismiss()
         } catch (error) {

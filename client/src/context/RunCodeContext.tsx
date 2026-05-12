@@ -12,6 +12,16 @@ import toast from "react-hot-toast"
 import { useFileSystem } from "./FileContext"
 
 const RunCodeContext = createContext<RunContextType | null>(null)
+const PUBLIC_PISTON_API_URL = "https://emkc.org/api/v2/piston"
+const DEFAULT_SUPPORTED_LANGUAGES: Language[] = [
+    { language: "javascript", version: "", aliases: ["js", "node"] },
+    { language: "python", version: "", aliases: ["py", "python3"] },
+    { language: "typescript", version: "", aliases: ["ts"] },
+    { language: "java", version: "", aliases: [] },
+    { language: "cpp", version: "", aliases: ["cc", "c++"] },
+    { language: "c", version: "", aliases: [] },
+]
+const DEFAULT_SELECTED_LANGUAGE = DEFAULT_SUPPORTED_LANGUAGES[0]
 
 export const useRunCode = () => {
     const context = useContext(RunCodeContext)
@@ -28,21 +38,48 @@ const RunCodeContextProvider = ({ children }: { children: ReactNode }) => {
     const [input, setInput] = useState<string>("")
     const [output, setOutput] = useState<string>("")
     const [isRunning, setIsRunning] = useState<boolean>(false)
-    const [supportedLanguages, setSupportedLanguages] = useState<Language[]>([])
-    const [selectedLanguage, setSelectedLanguage] = useState<Language>({
-        language: "",
-        version: "",
-        aliases: [],
-    })
+    const [supportedLanguages, setSupportedLanguages] = useState<Language[]>(
+        DEFAULT_SUPPORTED_LANGUAGES,
+    )
+    const [selectedLanguage, setSelectedLanguage] = useState<Language>(
+        DEFAULT_SELECTED_LANGUAGE,
+    )
 
     useEffect(() => {
         const fetchSupportedLanguages = async () => {
+            setSupportedLanguages(DEFAULT_SUPPORTED_LANGUAGES)
+
             try {
                 const languages = await axiosInstance.get("/runtimes")
-                setSupportedLanguages(languages.data)
+                if (languages.data.length > 0) {
+                    setSupportedLanguages(languages.data)
+                    return
+                }
+
+                toast.error(
+                    "No Piston runtimes installed. Install a runtime before running code.",
+                )
             } catch (error: any) {
-                toast.error("Failed to fetch supported languages")
-                if (error?.response?.data) console.error(error?.response?.data)
+                try {
+                    const languages = await fetch(
+                        `${PUBLIC_PISTON_API_URL}/runtimes`,
+                    )
+                    if (!languages.ok) throw new Error(languages.statusText)
+                    const fallbackLanguages = await languages.json()
+                    if (fallbackLanguages.length > 0) {
+                        setSupportedLanguages(fallbackLanguages)
+                        return
+                    }
+                } catch (fallbackError: any) {
+                    toast.error(
+                        "Using default languages. Start local Piston to run code.",
+                    )
+                    console.error(
+                        fallbackError?.message ||
+                            error?.message ||
+                            "Failed to fetch supported languages",
+                    )
+                }
             }
         }
 
@@ -67,8 +104,11 @@ const RunCodeContextProvider = ({ children }: { children: ReactNode }) => {
 
     const runCode = async () => {
         try {
-            if (!selectedLanguage) {
-                return toast.error("Please select a language to run the code")
+            if (!selectedLanguage.language || !selectedLanguage.version) {
+                setOutput(
+                    "No runnable Piston version is available for this language. Install runtimes in local Piston first.",
+                )
+                return toast.error("No runnable language version available")
             } else if (!activeFile) {
                 return toast.error("Please open a file to run the code")
             } else {
@@ -92,8 +132,14 @@ const RunCodeContextProvider = ({ children }: { children: ReactNode }) => {
             setIsRunning(false)
             toast.dismiss()
         } catch (error: any) {
-            console.error(error.response.data)
-            console.error(error.response.data.error)
+            const errorMessage =
+                error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error?.message ||
+                "Failed to run the code"
+
+            console.error(errorMessage)
+            setOutput(errorMessage)
             setIsRunning(false)
             toast.dismiss()
             toast.error("Failed to run the code")
