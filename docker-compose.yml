@@ -1,17 +1,33 @@
 services:
+  piston:
+    container_name: devsync-piston
+    image: ghcr.io/engineer-man/piston
+    privileged: true
+    volumes:
+      - ./piston-data:/piston
+    networks:
+      - DevSync
+    ports:
+      - "2000:2000"
+
   server:
     container_name: devsync-server
     build:
       context: ./server
       dockerfile: Dockerfile
       target: runner
+    environment:
+      - PORT=5001
+      - PISTON_API_URL=http://piston:2000/api/v2
     volumes:
       - ./server:/app
       - /build/node_modules
     networks:
       - DevSync
     ports:
-      - "3000:3000"
+      - "5001:5001"
+    depends_on:
+      - piston
 
   client:
     container_name: devsync-client
